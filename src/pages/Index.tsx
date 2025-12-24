@@ -68,7 +68,7 @@ const stats = [
 
 const testimonials = [
   {
-    quote: "Shakti helped me find a mentor who truly understood my career challenges. I've grown so much in just 6 months.",
+    quote: "EmpowerHer helped me find a mentor who truly understood my career challenges. I've grown so much in just 6 months.",
     author: "Riya Kapoor",
     role: "Software Developer",
     avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=face",
@@ -132,7 +132,7 @@ export default function Index() {
               
               <h1 className="font-display text-display-lg md:text-display-xl lg:text-display-2xl">
                 Unleash Your{' '}
-                <span className="text-gradient-primary">Inner Shakti</span>
+                <span className="text-gradient-primary">Inner Strength</span>
               </h1>
               
               <p className="text-lg text-muted-foreground max-w-lg">

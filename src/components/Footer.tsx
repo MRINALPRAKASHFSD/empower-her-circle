@@ -36,10 +36,10 @@ export function Footer() {
           <div className="col-span-2 md:col-span-1">
             <Link to="/" className="flex items-center gap-2 mb-4">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-lg">
-                <span className="text-xl font-display font-bold text-primary-foreground">श</span>
+                <span className="text-xl font-display font-bold text-primary-foreground">E</span>
               </div>
               <span className="font-display text-xl font-bold text-gradient-primary">
-                Shakti
+                EmpowerHer
               </span>
             </Link>
             <p className="text-muted-foreground text-sm mb-4">
@@ -98,7 +98,7 @@ export function Footer() {
 
         {/* Copyright */}
         <div className="mt-8 pt-8 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
-          <p>© 2024 Shakti. All rights reserved.</p>
+          <p>© 2024 EmpowerHer. All rights reserved.</p>
           <p>Made with 💜 for women everywhere</p>
         </div>
       </div>
