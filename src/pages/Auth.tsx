@@ -120,7 +120,7 @@ export default function Auth() {
         toast.error(error.message);
       }
     } else {
-      toast.success('Account created successfully! Welcome to Shakti.');
+      toast.success('Account created successfully! Welcome to EmpowerHer.');
       navigate('/dashboard');
     }
   };
@@ -146,10 +146,10 @@ export default function Auth() {
         {/* Logo */}
         <Link to="/" className="flex items-center justify-center gap-2 mb-8">
           <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-lg shadow-primary/20">
-            <span className="text-2xl font-display font-bold text-primary-foreground">श</span>
+            <span className="text-2xl font-display font-bold text-primary-foreground">E</span>
           </div>
           <span className="font-display text-2xl font-bold text-gradient-primary">
-            Shakti
+            EmpowerHer
           </span>
         </Link>
 

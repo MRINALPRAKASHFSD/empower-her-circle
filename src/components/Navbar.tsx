@@ -54,10 +54,10 @@ export function Navbar() {
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-lg shadow-primary/20">
-              <span className="text-xl font-display font-bold text-primary-foreground">श</span>
+              <span className="text-xl font-display font-bold text-primary-foreground">E</span>
             </div>
             <span className="font-display text-xl font-bold text-gradient-primary hidden sm:block">
-              Shakti
+              EmpowerHer
             </span>
           </Link>
 

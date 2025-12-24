@@ -59,7 +59,7 @@ const recentMessages = [
   },
   {
     id: '2',
-    from: 'Shakti Community',
+    from: 'EmpowerHer Community',
     avatar: '',
     message: 'New discussion: "Navigating Salary Negotiations"',
     time: '5h ago',
