@@ -8,8 +8,8 @@ interface AuthContextType {
   loading: boolean;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signInWithOtp: (email: string) => Promise<{ error: Error | null }>;
-  verifyOtp: (email: string, token: string) => Promise<{ error: Error | null }>;
+  sendOtp: (email: string, fullName?: string) => Promise<{ error: Error | null }>;
+  verifyOtp: (email: string, otp: string) => Promise<{ error: Error | null; isNewUser?: boolean }>;
   signOut: () => Promise<void>;
 }
 
@@ -64,23 +64,58 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error };
   };
 
-  const signInWithOtp = async (email: string) => {
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        shouldCreateUser: true,
-      },
-    });
-    return { error };
+  const sendOtp = async (email: string, fullName?: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('otp-auth', {
+        body: { email, fullName, action: 'send' },
+      });
+
+      if (error) {
+        return { error: new Error(error.message || 'Failed to send OTP') };
+      }
+
+      if (data?.error) {
+        return { error: new Error(data.error) };
+      }
+
+      return { error: null };
+    } catch (err: any) {
+      return { error: new Error(err.message || 'Failed to send OTP') };
+    }
   };
 
-  const verifyOtp = async (email: string, token: string) => {
-    const { error } = await supabase.auth.verifyOtp({
-      email,
-      token,
-      type: 'email',
-    });
-    return { error };
+  const verifyOtp = async (email: string, otp: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('otp-auth', {
+        body: { email, otp, action: 'verify' },
+      });
+
+      if (error) {
+        return { error: new Error(error.message || 'Failed to verify OTP') };
+      }
+
+      if (data?.error) {
+        return { error: new Error(data.error) };
+      }
+
+      // If verification successful, use the magic link token to sign in
+      if (data?.token && data?.email) {
+        const { error: verifyError } = await supabase.auth.verifyOtp({
+          token_hash: data.token,
+          type: 'magiclink',
+        });
+
+        if (verifyError) {
+          console.error('Magic link verification error:', verifyError);
+          // If magic link fails, try refreshing the session
+          await supabase.auth.refreshSession();
+        }
+      }
+
+      return { error: null, isNewUser: data?.isNewUser };
+    } catch (err: any) {
+      return { error: new Error(err.message || 'Failed to verify OTP') };
+    }
   };
 
   const signOut = async () => {
@@ -88,7 +123,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signUp, signIn, signInWithOtp, verifyOtp, signOut }}>
+    <AuthContext.Provider value={{ user, session, loading, signUp, signIn, sendOtp, verifyOtp, signOut }}>
       {children}
     </AuthContext.Provider>
   );
