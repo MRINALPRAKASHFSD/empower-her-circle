@@ -11,39 +11,37 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Loader2, Eye, EyeOff, Mail, Lock, User } from 'lucide-react';
+import { Loader2, Mail, User, ArrowLeft, KeyRound } from 'lucide-react';
+import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 
-const loginSchema = z.object({
+const emailSchema = z.object({
   email: z.string().trim().email({ message: 'Please enter a valid email address' }),
-  password: z.string().min(6, { message: 'Password must be at least 6 characters' }),
 });
 
 const signupSchema = z.object({
   fullName: z.string().trim().min(2, { message: 'Name must be at least 2 characters' }).max(100),
   email: z.string().trim().email({ message: 'Please enter a valid email address' }),
-  password: z.string().min(6, { message: 'Password must be at least 6 characters' }),
-  confirmPassword: z.string(),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ['confirmPassword'],
 });
+
+type AuthStep = 'email' | 'otp';
 
 export default function Auth() {
   const navigate = useNavigate();
-  const { signIn, signUp, user } = useAuth();
+  const { signInWithOtp, verifyOtp, user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [authStep, setAuthStep] = useState<AuthStep>('email');
+  const [otpValue, setOtpValue] = useState('');
 
   // Login form state
   const [loginEmail, setLoginEmail] = useState('');
-  const [loginPassword, setLoginPassword] = useState('');
 
   // Signup form state
   const [signupName, setSignupName] = useState('');
   const [signupEmail, setSignupEmail] = useState('');
-  const [signupPassword, setSignupPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+
+  // Current email being verified
+  const [currentEmail, setCurrentEmail] = useState('');
 
   // Redirect if already logged in
   if (user) {
@@ -51,14 +49,10 @@ export default function Auth() {
     return null;
   }
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSendOtp = async (email: string, isSignup: boolean = false, fullName?: string) => {
     setErrors({});
 
-    const result = loginSchema.safeParse({
-      email: loginEmail,
-      password: loginPassword,
-    });
+    const result = emailSchema.safeParse({ email });
 
     if (!result.success) {
       const fieldErrors: Record<string, string> = {};
@@ -72,30 +66,68 @@ export default function Auth() {
     }
 
     setIsLoading(true);
-    const { error } = await signIn(loginEmail, loginPassword);
+    const { error } = await signInWithOtp(email);
     setIsLoading(false);
 
     if (error) {
-      if (error.message.includes('Invalid login credentials')) {
-        toast.error('Invalid email or password. Please try again.');
-      } else {
-        toast.error(error.message);
-      }
+      toast.error(error.message);
     } else {
-      toast.success('Welcome back!');
+      setCurrentEmail(email);
+      setAuthStep('otp');
+      toast.success('OTP sent! Please check your email.');
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (otpValue.length !== 6) {
+      toast.error('Please enter the complete 6-digit OTP');
+      return;
+    }
+
+    setIsLoading(true);
+    const { error } = await verifyOtp(currentEmail, otpValue);
+    setIsLoading(false);
+
+    if (error) {
+      toast.error('Invalid OTP. Please try again.');
+      setOtpValue('');
+    } else {
+      toast.success('Welcome to EmpowerHer!');
       navigate('/dashboard');
     }
   };
 
-  const handleSignup = async (e: React.FormEvent) => {
+  const handleResendOtp = async () => {
+    setIsLoading(true);
+    const { error } = await signInWithOtp(currentEmail);
+    setIsLoading(false);
+
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success('OTP resent! Please check your email.');
+      setOtpValue('');
+    }
+  };
+
+  const handleBack = () => {
+    setAuthStep('email');
+    setOtpValue('');
+    setCurrentEmail('');
+  };
+
+  const handleLoginSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await handleSendOtp(loginEmail);
+  };
+
+  const handleSignupSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
 
     const result = signupSchema.safeParse({
       fullName: signupName,
       email: signupEmail,
-      password: signupPassword,
-      confirmPassword,
     });
 
     if (!result.success) {
@@ -109,21 +141,110 @@ export default function Auth() {
       return;
     }
 
-    setIsLoading(true);
-    const { error } = await signUp(signupEmail, signupPassword, signupName);
-    setIsLoading(false);
-
-    if (error) {
-      if (error.message.includes('User already registered')) {
-        toast.error('This email is already registered. Please sign in instead.');
-      } else {
-        toast.error(error.message);
-      }
-    } else {
-      toast.success('Account created successfully! Welcome to EmpowerHer.');
-      navigate('/dashboard');
-    }
+    await handleSendOtp(signupEmail, true, signupName);
   };
+
+  // OTP Verification Screen
+  if (authStep === 'otp') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex items-center justify-center p-4">
+        {/* Background decoration */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-1/4 -left-1/4 w-1/2 h-1/2 bg-gradient-radial from-primary/20 to-transparent rounded-full blur-3xl" />
+          <div className="absolute bottom-1/4 -right-1/4 w-1/2 h-1/2 bg-gradient-radial from-secondary/20 to-transparent rounded-full blur-3xl" />
+        </div>
+
+        <div className="absolute top-4 right-4">
+          <ThemeToggle />
+        </div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="w-full max-w-md relative z-10"
+        >
+          {/* Logo */}
+          <Link to="/" className="flex items-center justify-center gap-2 mb-8">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-lg shadow-primary/20">
+              <span className="text-2xl font-display font-bold text-primary-foreground">E</span>
+            </div>
+            <span className="font-display text-2xl font-bold text-gradient-primary">
+              EmpowerHer
+            </span>
+          </Link>
+
+          <Card variant="glass" className="border-border/50">
+            <CardHeader className="text-center pb-2">
+              <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                <KeyRound className="w-8 h-8 text-primary" />
+              </div>
+              <CardTitle className="text-2xl font-display">Verify Your Email</CardTitle>
+              <CardDescription>
+                We've sent a 6-digit code to<br />
+                <span className="font-medium text-foreground">{currentEmail}</span>
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex justify-center">
+                <InputOTP
+                  maxLength={6}
+                  value={otpValue}
+                  onChange={(value) => setOtpValue(value)}
+                  disabled={isLoading}
+                >
+                  <InputOTPGroup>
+                    <InputOTPSlot index={0} />
+                    <InputOTPSlot index={1} />
+                    <InputOTPSlot index={2} />
+                    <InputOTPSlot index={3} />
+                    <InputOTPSlot index={4} />
+                    <InputOTPSlot index={5} />
+                  </InputOTPGroup>
+                </InputOTP>
+              </div>
+
+              <Button
+                variant="hero"
+                className="w-full"
+                onClick={handleVerifyOtp}
+                disabled={isLoading || otpValue.length !== 6}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Verifying...
+                  </>
+                ) : (
+                  'Verify & Continue'
+                )}
+              </Button>
+
+              <div className="flex items-center justify-between text-sm">
+                <button
+                  type="button"
+                  onClick={handleBack}
+                  className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
+                  disabled={isLoading}
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  Back
+                </button>
+                <button
+                  type="button"
+                  onClick={handleResendOtp}
+                  className="text-primary hover:underline"
+                  disabled={isLoading}
+                >
+                  Resend OTP
+                </button>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex items-center justify-center p-4">
@@ -169,7 +290,7 @@ export default function Auth() {
 
               {/* Login Tab */}
               <TabsContent value="login">
-                <form onSubmit={handleLogin} className="space-y-4">
+                <form onSubmit={handleLoginSubmit} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="login-email">Email</Label>
                     <div className="relative">
@@ -189,48 +310,26 @@ export default function Auth() {
                     )}
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="login-password">Password</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input
-                        id="login-password"
-                        type={showPassword ? 'text' : 'password'}
-                        placeholder="Enter your password"
-                        value={loginPassword}
-                        onChange={(e) => setLoginPassword(e.target.value)}
-                        className="pl-10 pr-10"
-                        disabled={isLoading}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      >
-                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                    {errors.password && (
-                      <p className="text-sm text-destructive">{errors.password}</p>
-                    )}
-                  </div>
-
                   <Button type="submit" variant="hero" className="w-full" disabled={isLoading}>
                     {isLoading ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Signing in...
+                        Sending OTP...
                       </>
                     ) : (
-                      'Sign In'
+                      'Send OTP'
                     )}
                   </Button>
+
+                  <p className="text-center text-sm text-muted-foreground">
+                    We'll send a one-time password to your email
+                  </p>
                 </form>
               </TabsContent>
 
               {/* Signup Tab */}
               <TabsContent value="signup">
-                <form onSubmit={handleSignup} className="space-y-4">
+                <form onSubmit={handleSignupSubmit} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="signup-name">Full Name</Label>
                     <div className="relative">
@@ -269,61 +368,20 @@ export default function Auth() {
                     )}
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-password">Password</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input
-                        id="signup-password"
-                        type={showPassword ? 'text' : 'password'}
-                        placeholder="Create a password"
-                        value={signupPassword}
-                        onChange={(e) => setSignupPassword(e.target.value)}
-                        className="pl-10 pr-10"
-                        disabled={isLoading}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      >
-                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                    {errors.password && (
-                      <p className="text-sm text-destructive">{errors.password}</p>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="confirm-password">Confirm Password</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input
-                        id="confirm-password"
-                        type={showPassword ? 'text' : 'password'}
-                        placeholder="Confirm your password"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        className="pl-10"
-                        disabled={isLoading}
-                      />
-                    </div>
-                    {errors.confirmPassword && (
-                      <p className="text-sm text-destructive">{errors.confirmPassword}</p>
-                    )}
-                  </div>
-
                   <Button type="submit" variant="hero" className="w-full" disabled={isLoading}>
                     {isLoading ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Creating account...
+                        Sending OTP...
                       </>
                     ) : (
-                      'Create Account'
+                      'Send OTP'
                     )}
                   </Button>
+
+                  <p className="text-center text-sm text-muted-foreground">
+                    We'll send a one-time password to verify your email
+                  </p>
                 </form>
               </TabsContent>
             </Tabs>
