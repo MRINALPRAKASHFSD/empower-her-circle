@@ -27,7 +27,7 @@ type AuthStep = 'email' | 'otp';
 
 export default function Auth() {
   const navigate = useNavigate();
-  const { signInWithOtp, verifyOtp, user } = useAuth();
+  const { sendOtp, verifyOtp, user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [authStep, setAuthStep] = useState<AuthStep>('email');
@@ -42,6 +42,7 @@ export default function Auth() {
 
   // Current email being verified
   const [currentEmail, setCurrentEmail] = useState('');
+  const [currentFullName, setCurrentFullName] = useState('');
 
   // Redirect if already logged in
   if (user) {
@@ -49,7 +50,7 @@ export default function Auth() {
     return null;
   }
 
-  const handleSendOtp = async (email: string, isSignup: boolean = false, fullName?: string) => {
+  const handleSendOtp = async (email: string, fullName?: string) => {
     setErrors({});
 
     const result = emailSchema.safeParse({ email });
@@ -66,15 +67,16 @@ export default function Auth() {
     }
 
     setIsLoading(true);
-    const { error } = await signInWithOtp(email);
+    const { error } = await sendOtp(email, fullName);
     setIsLoading(false);
 
     if (error) {
       toast.error(error.message);
     } else {
       setCurrentEmail(email);
+      setCurrentFullName(fullName || '');
       setAuthStep('otp');
-      toast.success('OTP sent! Please check your email.');
+      toast.success('OTP sent! Please check your email inbox.');
     }
   };
 
@@ -85,21 +87,21 @@ export default function Auth() {
     }
 
     setIsLoading(true);
-    const { error } = await verifyOtp(currentEmail, otpValue);
+    const { error, isNewUser } = await verifyOtp(currentEmail, otpValue);
     setIsLoading(false);
 
     if (error) {
-      toast.error('Invalid OTP. Please try again.');
+      toast.error(error.message);
       setOtpValue('');
     } else {
-      toast.success('Welcome to EmpowerHer!');
+      toast.success(isNewUser ? 'Account created! Welcome to EmpowerHer!' : 'Welcome back to EmpowerHer!');
       navigate('/dashboard');
     }
   };
 
   const handleResendOtp = async () => {
     setIsLoading(true);
-    const { error } = await signInWithOtp(currentEmail);
+    const { error } = await sendOtp(currentEmail, currentFullName);
     setIsLoading(false);
 
     if (error) {
@@ -114,6 +116,7 @@ export default function Auth() {
     setAuthStep('email');
     setOtpValue('');
     setCurrentEmail('');
+    setCurrentFullName('');
   };
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
@@ -141,7 +144,7 @@ export default function Auth() {
       return;
     }
 
-    await handleSendOtp(signupEmail, true, signupName);
+    await handleSendOtp(signupEmail, signupName);
   };
 
   // OTP Verification Screen
