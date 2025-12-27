@@ -15,6 +15,7 @@ import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { EmergencyAlertButton } from '@/components/EmergencyAlertButton';
 import { MentorCard, sampleMentors } from '@/components/MentorCard';
+import { FloatingOrbs, GridPattern, TextReveal, StaggerContainer, StaggerItem } from '@/components/AnimatedBackground';
 
 const categories = [
   'All',
@@ -50,7 +51,10 @@ export default function Mentors() {
   });
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background relative overflow-hidden">
+      <FloatingOrbs variant="subtle" />
+      <GridPattern opacity={10} />
+      
       <Navbar />
       
       {/* Header */}
