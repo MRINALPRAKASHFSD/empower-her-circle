@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { EmergencyAlertButton } from '@/components/EmergencyAlertButton';
+import { FloatingOrbs, GridPattern } from '@/components/AnimatedBackground';
 
 const emergencyContacts = [
   { name: 'Women Helpline', number: '181', description: '24/7 support for women in distress', icon: Heart },
@@ -15,7 +16,10 @@ const emergencyContacts = [
 
 export default function Emergency() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background relative overflow-hidden">
+      <FloatingOrbs variant="subtle" />
+      <GridPattern opacity={10} />
+      
       <Navbar />
       
       <main className="pt-24 pb-12">

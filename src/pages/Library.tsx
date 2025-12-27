@@ -18,6 +18,7 @@ import { EmergencyAlertButton } from '@/components/EmergencyAlertButton';
 import { CourseCard, sampleCourses, Course } from '@/components/CourseCard';
 import { Progress } from '@/components/ui/progress';
 import { Card, CardContent } from '@/components/ui/card';
+import { FloatingOrbs, GridPattern, TextReveal, StaggerContainer, StaggerItem } from '@/components/AnimatedBackground';
 
 const categories = [
   'All',
@@ -99,7 +100,10 @@ export default function Library() {
   const completedCourses = allCourses.filter(c => c.completedLessons === c.lessons).length;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background relative overflow-hidden">
+      <FloatingOrbs variant="subtle" />
+      <GridPattern opacity={10} />
+      
       <Navbar />
       
       {/* Header */}
