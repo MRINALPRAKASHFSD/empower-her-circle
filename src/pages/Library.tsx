@@ -6,19 +6,23 @@ import {
   Play, 
   Clock, 
   Award,
-  Filter,
   Grid,
-  List
+  List,
+  Check
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { EmergencyAlertButton } from '@/components/EmergencyAlertButton';
-import { CourseCard, sampleCourses, Course } from '@/components/CourseCard';
 import { Progress } from '@/components/ui/progress';
 import { Card, CardContent } from '@/components/ui/card';
-import { FloatingOrbs, GridPattern, TextReveal, StaggerContainer, StaggerItem } from '@/components/AnimatedBackground';
+import { Badge } from '@/components/ui/badge';
+import { FloatingOrbs, GridPattern } from '@/components/AnimatedBackground';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useCourses, useUserCourses, useEnrollCourse, useUpdateProgress, Course } from '@/hooks/useCourses';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 
 const categories = [
   'All',
@@ -30,74 +34,153 @@ const categories = [
   'Relationships',
 ];
 
-// Extended courses
-const allCourses: Course[] = [
-  ...sampleCourses,
-  {
-    id: '5',
-    title: 'Self-Defense Basics for Women',
-    description: 'Learn essential self-defense techniques and situational awareness to stay safe in any environment.',
-    category: 'Safety',
-    thumbnail: 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=400&h=300&fit=crop',
-    duration: '2h 15m',
-    lessons: 10,
-    completedLessons: 0,
-    level: 'Beginner',
-  },
-  {
-    id: '6',
-    title: 'Navigating Career Transitions',
-    description: 'Strategic approaches to changing careers, industries, or roles while maintaining momentum.',
-    category: 'Career',
-    thumbnail: 'https://images.unsplash.com/photo-1552581234-26160f608093?w=400&h=300&fit=crop',
-    duration: '3h 00m',
-    lessons: 14,
-    completedLessons: 2,
-    level: 'Intermediate',
-  },
-  {
-    id: '7',
-    title: 'Reproductive Health Essentials',
-    description: 'Comprehensive guide to understanding your body, menstrual health, and reproductive wellness.',
-    category: 'Health',
-    thumbnail: 'https://images.unsplash.com/photo-1505751172876-fa1923c5c528?w=400&h=300&fit=crop',
-    duration: '2h 45m',
-    lessons: 12,
-    completedLessons: 12,
-    level: 'Beginner',
-  },
-  {
-    id: '8',
-    title: 'Setting Healthy Boundaries',
-    description: 'Learn to establish and maintain boundaries in personal and professional relationships.',
-    category: 'Relationships',
-    thumbnail: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=400&h=300&fit=crop',
-    duration: '1h 30m',
-    lessons: 8,
-    completedLessons: 4,
-    level: 'Beginner',
-  },
-];
+function CourseCardDB({ 
+  course, 
+  enrollment,
+  onEnroll,
+  onContinue
+}: { 
+  course: Course; 
+  enrollment?: { completed_lessons: number; id: string } | null;
+  onEnroll: () => void;
+  onContinue: () => void;
+}) {
+  const progress = enrollment ? (enrollment.completed_lessons / course.lessons) * 100 : 0;
+  const isEnrolled = !!enrollment;
+  const isCompleted = enrollment && enrollment.completed_lessons >= course.lessons;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      whileHover={{ y: -4 }}
+      className="group"
+    >
+      <Card variant="glass" className="h-full overflow-hidden hover:border-primary/30 transition-all">
+        <div className="relative aspect-video overflow-hidden">
+          <img
+            src={course.thumbnail || ''}
+            alt={course.title}
+            className="w-full h-full object-cover transition-transform group-hover:scale-105"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
+          <Badge className="absolute top-3 left-3" variant="secondary">
+            {course.category}
+          </Badge>
+          {isCompleted && (
+            <div className="absolute top-3 right-3 w-8 h-8 rounded-full bg-success flex items-center justify-center">
+              <Check className="w-5 h-5 text-white" />
+            </div>
+          )}
+          {!isCompleted && (
+            <button className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="w-14 h-14 rounded-full bg-primary flex items-center justify-center shadow-lg">
+                <Play className="w-6 h-6 text-primary-foreground ml-1" />
+              </div>
+            </button>
+          )}
+        </div>
+        
+        <CardContent className="p-4">
+          <h3 className="font-semibold mb-2 line-clamp-1">{course.title}</h3>
+          <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
+            {course.description}
+          </p>
+          
+          <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
+            <span className="flex items-center gap-1">
+              <Clock className="w-4 h-4" />
+              {course.duration}
+            </span>
+            <span>{course.lessons} lessons</span>
+            <Badge variant="outline" className="text-xs">
+              {course.level}
+            </Badge>
+          </div>
+          
+          {isEnrolled ? (
+            <div>
+              <div className="flex items-center justify-between text-sm mb-2">
+                <span className="text-muted-foreground">Progress</span>
+                <span className="font-medium">{enrollment.completed_lessons}/{course.lessons}</span>
+              </div>
+              <Progress value={progress} className="h-2 mb-3" />
+              <Button 
+                size="sm" 
+                className="w-full"
+                onClick={onContinue}
+                variant={isCompleted ? 'outline' : 'default'}
+              >
+                {isCompleted ? 'Review Course' : 'Continue Learning'}
+              </Button>
+            </div>
+          ) : (
+            <Button size="sm" className="w-full" onClick={onEnroll}>
+              <BookOpen className="w-4 h-4 mr-2" />
+              Enroll Now
+            </Button>
+          )}
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+}
 
 export default function Library() {
+  const { user } = useAuth();
+  const { data: courses, isLoading: coursesLoading } = useCourses();
+  const { data: userCourses, isLoading: enrollmentsLoading } = useUserCourses();
+  const enrollCourse = useEnrollCourse();
+  const updateProgress = useUpdateProgress();
+
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
-  const filteredCourses = allCourses.filter((course) => {
+  const isLoading = coursesLoading || enrollmentsLoading;
+
+  const filteredCourses = (courses || []).filter((course) => {
     const matchesSearch = course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      course.description.toLowerCase().includes(searchQuery.toLowerCase());
+      course.description?.toLowerCase().includes(searchQuery.toLowerCase());
     
     const matchesCategory = selectedCategory === 'All' || course.category === selectedCategory;
     
     return matchesSearch && matchesCategory;
   });
 
+  // Create enrollment map for quick lookup
+  const enrollmentMap = new Map(
+    (userCourses || []).map(uc => [uc.course_id, { completed_lessons: uc.completed_lessons, id: uc.id }])
+  );
+
   // Calculate overall progress
-  const totalLessons = allCourses.reduce((acc, course) => acc + course.lessons, 0);
-  const completedLessons = allCourses.reduce((acc, course) => acc + course.completedLessons, 0);
-  const overallProgress = Math.round((completedLessons / totalLessons) * 100);
-  const completedCourses = allCourses.filter(c => c.completedLessons === c.lessons).length;
+  const totalLessons = (courses || []).reduce((acc, course) => acc + course.lessons, 0);
+  const completedLessons = (userCourses || []).reduce((acc, uc) => acc + uc.completed_lessons, 0);
+  const overallProgress = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
+  const completedCourses = (userCourses || []).filter(uc => {
+    const course = courses?.find(c => c.id === uc.course_id);
+    return course && uc.completed_lessons >= course.lessons;
+  }).length;
+
+  const handleEnroll = async (courseId: string) => {
+    if (!user) {
+      toast.error('Please sign in to enroll');
+      return;
+    }
+    await enrollCourse.mutateAsync(courseId);
+  };
+
+  const handleContinue = async (enrollment: { id: string; completed_lessons: number }, course: Course) => {
+    // Simulate progressing through a lesson
+    if (enrollment.completed_lessons < course.lessons) {
+      await updateProgress.mutateAsync({
+        userCourseId: enrollment.id,
+        completedLessons: enrollment.completed_lessons + 1,
+        totalLessons: course.lessons,
+      });
+      toast.success('Lesson completed!');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
@@ -131,7 +214,7 @@ export default function Library() {
                     <BookOpen className="w-6 h-6 text-primary" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold">{allCourses.length}</p>
+                    <p className="text-2xl font-bold">{courses?.length || 0}</p>
                     <p className="text-sm text-muted-foreground">Total Courses</p>
                   </div>
                 </CardContent>
@@ -194,14 +277,14 @@ export default function Library() {
             <div className="flex items-center gap-2">
               <Button
                 variant={viewMode === 'grid' ? 'default' : 'ghost'}
-                size="icon-sm"
+                size="icon"
                 onClick={() => setViewMode('grid')}
               >
                 <Grid className="w-4 h-4" />
               </Button>
               <Button
                 variant={viewMode === 'list' ? 'default' : 'ghost'}
-                size="icon-sm"
+                size="icon"
                 onClick={() => setViewMode('list')}
               >
                 <List className="w-4 h-4" />
@@ -210,13 +293,38 @@ export default function Library() {
           </div>
 
           {/* Courses grid */}
-          {filteredCourses.length > 0 ? (
+          {isLoading ? (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {[...Array(8)].map((_, i) => (
+                <Card key={i}>
+                  <Skeleton className="aspect-video" />
+                  <CardContent className="p-4">
+                    <Skeleton className="h-5 w-3/4 mb-2" />
+                    <Skeleton className="h-4 w-full mb-1" />
+                    <Skeleton className="h-4 w-2/3 mb-3" />
+                    <Skeleton className="h-8 w-full" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : filteredCourses.length > 0 ? (
             <div className={viewMode === 'grid' 
               ? "grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
               : "space-y-4"
             }>
-              {filteredCourses.map((course, index) => (
-                <CourseCard key={course.id} course={course} index={index} />
+              {filteredCourses.map((course) => (
+                <CourseCardDB 
+                  key={course.id} 
+                  course={course}
+                  enrollment={enrollmentMap.get(course.id)}
+                  onEnroll={() => handleEnroll(course.id)}
+                  onContinue={() => {
+                    const enrollment = enrollmentMap.get(course.id);
+                    if (enrollment) {
+                      handleContinue(enrollment, course);
+                    }
+                  }}
+                />
               ))}
             </div>
           ) : (
