@@ -18,9 +18,6 @@ interface OTPRequest {
   otp?: string;
 }
 
-// Store OTPs temporarily (in production, use a database or Redis)
-const otpStore = new Map<string, { otp: string; expiresAt: number; fullName?: string }>();
-
 const generateOTP = (): string => {
   return Math.floor(100000 + Math.random() * 900000).toString();
 };
@@ -148,10 +145,21 @@ const handler = async (req: Request): Promise<Response> => {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     if (action === 'send') {
-      // Check rate limit (1 OTP per 30 seconds)
-      const existing = otpStore.get(email);
-      if (existing && existing.expiresAt > Date.now() - 570000) {
-        const waitTime = Math.ceil((existing.expiresAt - 570000 - Date.now()) / 1000);
+      // Check rate limit (1 OTP per 30 seconds) using database
+      const thirtySecondsAgo = new Date(Date.now() - 30000).toISOString();
+      const { data: recentOtp } = await supabase
+        .from('otp_codes')
+        .select('created_at')
+        .eq('email', email)
+        .eq('used', false)
+        .gte('created_at', thirtySecondsAgo)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (recentOtp) {
+        const createdAt = new Date(recentOtp.created_at).getTime();
+        const waitTime = Math.ceil((30000 - (Date.now() - createdAt)) / 1000);
         if (waitTime > 0) {
           return new Response(
             JSON.stringify({ error: `Please wait ${waitTime} seconds before requesting a new OTP` }),
@@ -162,10 +170,32 @@ const handler = async (req: Request): Promise<Response> => {
 
       // Generate OTP
       const newOtp = generateOTP();
-      const expiresAt = Date.now() + 600000; // 10 minutes
+      const expiresAt = new Date(Date.now() + 600000).toISOString(); // 10 minutes
 
-      // Store OTP
-      otpStore.set(email, { otp: newOtp, expiresAt, fullName });
+      // Mark any existing unused OTPs for this email as used
+      await supabase
+        .from('otp_codes')
+        .update({ used: true })
+        .eq('email', email)
+        .eq('used', false);
+
+      // Store new OTP in database
+      const { error: insertError } = await supabase
+        .from('otp_codes')
+        .insert({
+          email: email,
+          otp_code: newOtp,
+          full_name: fullName || null,
+          expires_at: expiresAt,
+        });
+
+      if (insertError) {
+        console.error("Failed to store OTP:", insertError);
+        return new Response(
+          JSON.stringify({ error: "Failed to generate OTP" }),
+          { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
 
       console.log(`Sending OTP to ${email}`);
 
@@ -196,39 +226,60 @@ const handler = async (req: Request): Promise<Response> => {
         );
       }
 
-      const stored = otpStore.get(email);
+      // Fetch the OTP from database
+      const { data: storedOtp, error: fetchError } = await supabase
+        .from('otp_codes')
+        .select('*')
+        .eq('email', email)
+        .eq('used', false)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
-      if (!stored) {
+      if (fetchError) {
+        console.error("Failed to fetch OTP:", fetchError);
+        return new Response(
+          JSON.stringify({ error: "Failed to verify OTP" }),
+          { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      if (!storedOtp) {
         return new Response(
           JSON.stringify({ error: "No OTP found. Please request a new one." }),
           { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
         );
       }
 
-      if (Date.now() > stored.expiresAt) {
-        otpStore.delete(email);
+      if (new Date() > new Date(storedOtp.expires_at)) {
+        // Mark as used since it's expired
+        await supabase
+          .from('otp_codes')
+          .update({ used: true })
+          .eq('id', storedOtp.id);
+
         return new Response(
           JSON.stringify({ error: "OTP has expired. Please request a new one." }),
           { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
         );
       }
 
-      if (stored.otp !== otp) {
+      if (storedOtp.otp_code !== otp) {
         return new Response(
           JSON.stringify({ error: "Invalid OTP. Please try again." }),
           { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
         );
       }
 
-      // OTP is valid - create or sign in user
-      otpStore.delete(email);
+      // OTP is valid - mark as used
+      await supabase
+        .from('otp_codes')
+        .update({ used: true })
+        .eq('id', storedOtp.id);
 
       // Check if user exists
       const { data: existingUsers } = await supabase.auth.admin.listUsers();
       const existingUser = existingUsers?.users?.find(u => u.email === email);
-
-      let accessToken: string;
-      let refreshToken: string;
 
       if (existingUser) {
         // Generate session for existing user
@@ -245,7 +296,6 @@ const handler = async (req: Request): Promise<Response> => {
           );
         }
 
-        // Extract token from the magic link
         const token = sessionData.properties?.hashed_token;
         
         return new Response(
@@ -267,7 +317,7 @@ const handler = async (req: Request): Promise<Response> => {
           password: tempPassword,
           email_confirm: true,
           user_metadata: {
-            full_name: stored.fullName || '',
+            full_name: storedOtp.full_name || '',
           },
         });
 
