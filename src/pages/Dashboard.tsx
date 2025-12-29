@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { motion } from 'framer-motion';
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import {
   User,
@@ -15,18 +15,25 @@ import {
   TrendingUp,
   Target,
   Heart,
-  Sparkles
+  Sparkles,
+  X,
+  Save
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { EmergencyAlertButton } from '@/components/EmergencyAlertButton';
 import { sampleMentors } from '@/components/MentorCard';
 import { sampleCourses } from '@/components/CourseCard';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 import { 
   FloatingOrbs, 
   GridPattern,
@@ -34,6 +41,13 @@ import {
   StaggerItem,
   TextReveal
 } from '@/components/AnimatedBackground';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 
 const upcomingSessions = [
   {
@@ -83,8 +97,70 @@ const achievements = [
 ];
 
 export default function Dashboard() {
-  const userName = 'Lakshmi';
+  const { user } = useAuth();
+  const [userName, setUserName] = useState('');
+  const [profileData, setProfileData] = useState<{ full_name: string; phone: string; avatar_url: string } | null>(null);
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
   const overallProgress = 68;
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!user) return;
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('full_name, phone, avatar_url')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      
+      if (data) {
+        setProfileData(data);
+        setUserName(data.full_name || user.user_metadata?.full_name || 'User');
+        setEditName(data.full_name || '');
+        setEditPhone(data.phone || '');
+      } else {
+        // Use metadata if no profile exists
+        const metaName = user.user_metadata?.full_name || '';
+        setUserName(metaName || 'User');
+        setEditName(metaName);
+      }
+    };
+
+    fetchProfile();
+  }, [user]);
+
+  const handleSaveProfile = async () => {
+    if (!user) return;
+    
+    setIsSaving(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .upsert({
+          user_id: user.id,
+          full_name: editName.trim(),
+          phone: editPhone.trim(),
+          updated_at: new Date().toISOString(),
+        }, {
+          onConflict: 'user_id'
+        });
+
+      if (error) throw error;
+
+      setUserName(editName.trim() || 'User');
+      setProfileData(prev => ({ ...prev!, full_name: editName.trim(), phone: editPhone.trim() }));
+      setIsEditProfileOpen(false);
+      toast.success('Profile updated successfully!');
+    } catch (error: any) {
+      console.error('Error saving profile:', error);
+      toast.error('Failed to update profile');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
@@ -368,7 +444,7 @@ export default function Dashboard() {
                         </motion.div>
                       ))}
                     </div>
-                    <Button variant="outline" size="sm" className="mt-4 w-full">
+                    <Button variant="outline" size="sm" className="mt-4 w-full" onClick={() => setIsEditProfileOpen(true)}>
                       <User className="w-4 h-4 mr-2" />
                       Edit Profile
                     </Button>
@@ -475,6 +551,46 @@ export default function Dashboard() {
 
       <Footer />
       <EmergencyAlertButton />
+
+      {/* Edit Profile Dialog */}
+      <Dialog open={isEditProfileOpen} onOpenChange={setIsEditProfileOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Profile</DialogTitle>
+            <DialogDescription>
+              Update your personal information below.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Full Name</Label>
+              <Input
+                id="name"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                placeholder="Enter your name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="phone">Phone Number</Label>
+              <Input
+                id="phone"
+                value={editPhone}
+                onChange={(e) => setEditPhone(e.target.value)}
+                placeholder="Enter your phone number"
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button variant="outline" onClick={() => setIsEditProfileOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveProfile} disabled={isSaving}>
+              {isSaving ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
