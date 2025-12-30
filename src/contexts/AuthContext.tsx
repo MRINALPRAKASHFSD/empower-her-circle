@@ -66,16 +66,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const sendOtp = async (email: string, fullName?: string) => {
     try {
-      const { data, error } = await supabase.functions.invoke('otp-auth', {
-        body: { email, fullName, action: 'send' },
+      // Use Supabase's built-in OTP - works for any email
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          data: fullName ? { full_name: fullName } : undefined,
+        },
       });
 
       if (error) {
         return { error: new Error(error.message || 'Failed to send OTP') };
-      }
-
-      if (data?.error) {
-        return { error: new Error(data.error) };
       }
 
       return { error: null };
@@ -86,33 +86,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const verifyOtp = async (email: string, otp: string) => {
     try {
-      const { data, error } = await supabase.functions.invoke('otp-auth', {
-        body: { email, otp, action: 'verify' },
+      // Use Supabase's built-in OTP verification
+      const { data, error } = await supabase.auth.verifyOtp({
+        email,
+        token: otp,
+        type: 'email',
       });
 
       if (error) {
         return { error: new Error(error.message || 'Failed to verify OTP') };
       }
 
-      if (data?.error) {
-        return { error: new Error(data.error) };
-      }
+      // Check if this is a new user by looking at created_at
+      const isNewUser = data.user ? 
+        (new Date().getTime() - new Date(data.user.created_at).getTime()) < 60000 : false;
 
-      // If verification successful, use the magic link token to sign in
-      if (data?.token && data?.email) {
-        const { error: verifyError } = await supabase.auth.verifyOtp({
-          token_hash: data.token,
-          type: 'magiclink',
-        });
-
-        if (verifyError) {
-          console.error('Magic link verification error:', verifyError);
-          // If magic link fails, try refreshing the session
-          await supabase.auth.refreshSession();
-        }
-      }
-
-      return { error: null, isNewUser: data?.isNewUser };
+      return { error: null, isNewUser };
     } catch (err: any) {
       return { error: new Error(err.message || 'Failed to verify OTP') };
     }
