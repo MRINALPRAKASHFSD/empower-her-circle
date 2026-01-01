@@ -281,36 +281,14 @@ const handler = async (req: Request): Promise<Response> => {
       const { data: existingUsers } = await supabase.auth.admin.listUsers();
       const existingUser = existingUsers?.users?.find(u => u.email === email);
 
+      let isNewUser = false;
+      let userId: string;
+
       if (existingUser) {
-        // Generate session for existing user
-        const { data: sessionData, error: sessionError } = await supabase.auth.admin.generateLink({
-          type: 'magiclink',
-          email: email,
-        });
-
-        if (sessionError) {
-          console.error("Session error:", sessionError);
-          return new Response(
-            JSON.stringify({ error: "Failed to create session" }),
-            { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
-          );
-        }
-
-        const token = sessionData.properties?.hashed_token;
-        
-        return new Response(
-          JSON.stringify({ 
-            success: true, 
-            message: "OTP verified",
-            action: 'redirect',
-            token: token,
-            email: email
-          }),
-          { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
-        );
-
+        userId = existingUser.id;
       } else {
         // Create new user
+        isNewUser = true;
         const tempPassword = crypto.randomUUID();
         const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
           email: email,
@@ -328,35 +306,44 @@ const handler = async (req: Request): Promise<Response> => {
             { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
           );
         }
+        userId = newUser.user.id;
+      }
 
-        // Generate session for new user
-        const { data: sessionData, error: sessionError } = await supabase.auth.admin.generateLink({
-          type: 'magiclink',
-          email: email,
-        });
+      // Generate a magic link token for automatic sign-in
+      const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
+        type: 'magiclink',
+        email: email,
+        options: {
+          redirectTo: 'https://f4fe8cd6-d824-495b-aaa7-63b2f97de8fe.lovableproject.com/',
+        },
+      });
 
-        if (sessionError) {
-          console.error("Session error:", sessionError);
-          return new Response(
-            JSON.stringify({ error: "Failed to create session" }),
-            { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
-          );
-        }
-
-        const token = sessionData.properties?.hashed_token;
-
+      if (linkError) {
+        console.error("Link generation error:", linkError);
         return new Response(
-          JSON.stringify({ 
-            success: true, 
-            message: "Account created and OTP verified",
-            action: 'redirect',
-            token: token,
-            email: email,
-            isNewUser: true
-          }),
-          { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+          JSON.stringify({ error: "Failed to create session" }),
+          { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
         );
       }
+
+      // Extract the token from the link
+      const actionLink = linkData.properties?.action_link;
+      let token = '';
+      if (actionLink) {
+        const url = new URL(actionLink);
+        token = url.searchParams.get('token') || '';
+      }
+
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: isNewUser ? "Account created and OTP verified" : "OTP verified",
+          token: token,
+          email: email,
+          isNewUser: isNewUser
+        }),
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
 
     } else {
       return new Response(
