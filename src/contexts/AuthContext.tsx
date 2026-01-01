@@ -66,21 +66,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const sendOtp = async (email: string, fullName?: string) => {
     try {
-      // Use custom OTP edge function that sends beautiful 6-digit code emails
-      const response = await supabase.functions.invoke('otp-auth', {
-        body: {
-          email,
-          fullName,
-          action: 'send',
+      // Use Supabase's built-in OTP - works for ANY email address
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          shouldCreateUser: true,
+          data: fullName ? { full_name: fullName } : undefined,
         },
       });
 
-      if (response.error) {
-        return { error: new Error(response.error.message || 'Failed to send OTP') };
-      }
-
-      if (response.data?.error) {
-        return { error: new Error(response.data.error) };
+      if (error) {
+        return { error: new Error(error.message || 'Failed to send OTP') };
       }
 
       return { error: null };
@@ -91,47 +87,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const verifyOtp = async (email: string, otp: string) => {
     try {
-      // Use custom OTP edge function for verification
-      const response = await supabase.functions.invoke('otp-auth', {
-        body: {
-          email,
-          otp,
-          action: 'verify',
-        },
+      // Use Supabase's built-in OTP verification
+      const { data, error } = await supabase.auth.verifyOtp({
+        email,
+        token: otp,
+        type: 'email',
       });
 
-      if (response.error) {
-        return { error: new Error(response.error.message || 'Failed to verify OTP') };
+      if (error) {
+        return { error: new Error(error.message || 'Failed to verify OTP') };
       }
 
-      if (response.data?.error) {
-        return { error: new Error(response.data.error) };
-      }
+      // Check if this is a new user by looking at created_at
+      const isNewUser = data.user ? 
+        (new Date().getTime() - new Date(data.user.created_at).getTime()) < 60000 : false;
 
-      // If verification successful, use the token to sign in
-      if (response.data?.success && response.data?.token) {
-        const { error: verifyError } = await supabase.auth.verifyOtp({
-          token_hash: response.data.token,
-          type: 'magiclink',
-        });
-
-        if (verifyError) {
-          // Try email-based verification as fallback
-          const { error: fallbackError } = await supabase.auth.verifyOtp({
-            email,
-            token: response.data.token,
-            type: 'email',
-          });
-          
-          if (fallbackError) {
-            console.log("Token verification failed, refreshing session...");
-            // Force session refresh
-            await supabase.auth.refreshSession();
-          }
-        }
-      }
-
-      return { error: null, isNewUser: response.data?.isNewUser };
+      return { error: null, isNewUser };
     } catch (err: any) {
       return { error: new Error(err.message || 'Failed to verify OTP') };
     }
