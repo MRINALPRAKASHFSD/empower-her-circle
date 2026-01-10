@@ -10,6 +10,7 @@ import Dashboard from "./pages/Dashboard";
 import Mentors from "./pages/Mentors";
 import Library from "./pages/Library";
 import Emergency from "./pages/Emergency";
+import Journal from "./pages/Journal";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
@@ -36,6 +37,14 @@ const App = () => (
             <Route path="/mentors" element={<Mentors />} />
             <Route path="/library" element={<Library />} />
             <Route path="/emergency" element={<Emergency />} />
+            <Route
+              path="/journal"
+              element={
+                <ProtectedRoute>
+                  <Journal />
+                </ProtectedRoute>
+              }
+            />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

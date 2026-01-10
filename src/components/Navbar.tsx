@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, Shield, BookOpen, Users, Home, LogOut, User } from 'lucide-react';
+import { Menu, X, Shield, BookOpen, Users, Home, LogOut, User, BookHeart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useAuth } from '@/contexts/AuthContext';
@@ -20,6 +20,7 @@ const navLinks = [
   { href: '/dashboard', label: 'Dashboard', icon: Users, protected: true },
   { href: '/mentors', label: 'Find Mentor', icon: Users },
   { href: '/library', label: 'Learn', icon: BookOpen },
+  { href: '/journal', label: 'Journal', icon: BookHeart, protected: true },
   { href: '/emergency', label: 'Emergency', icon: Shield },
 ];
 
