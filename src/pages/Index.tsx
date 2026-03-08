@@ -29,7 +29,7 @@ import {
   FloatingCard,
   TextReveal
 } from '@/components/AnimatedBackground';
-import heroImage from '@/assets/hero-women.jpg';
+
 
 const features = [
   {
@@ -80,21 +80,24 @@ const stats = [
 const testimonials = [
   {
     quote: "EmpowerHer helped me find a mentor who truly understood my career challenges. I've grown so much in just 6 months.",
-    author: "Riya Kapoor",
+    author: "Riya K.",
     role: "Software Developer",
-    avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=face",
+    initials: "RK",
+    color: "from-primary to-secondary",
   },
   {
     quote: "The emergency feature gave me peace of mind when I had to travel alone for work. Knowing help is one tap away is invaluable.",
-    author: "Ananya Singh",
+    author: "Ananya S.",
     role: "Marketing Manager",
-    avatar: "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?w=100&h=100&fit=crop&crop=face",
+    initials: "AS",
+    color: "from-secondary to-accent",
   },
   {
     quote: "The financial courses helped me take control of my money. I've saved more in 3 months than I did in the past year.",
-    author: "Pooja Reddy",
+    author: "Pooja R.",
     role: "Teacher",
-    avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop&crop=face",
+    initials: "PR",
+    color: "from-accent to-primary",
   },
 ];
 
@@ -190,20 +193,16 @@ export default function Index() {
                 transition={{ delay: 0.8 }}
                 className="flex items-center gap-6 pt-4"
               >
-                <div className="flex -space-x-3">
-                  {[1, 2, 3, 4].map((i) => (
+              <div className="flex -space-x-3">
+                  {['RK', 'AS', 'PR', 'MJ'].map((initials, i) => (
                     <motion.div
                       key={i}
                       initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: 0.9 + i * 0.1 }}
-                      className="w-10 h-10 rounded-full border-2 border-background overflow-hidden ring-2 ring-primary/20"
+                      className="w-10 h-10 rounded-full border-2 border-background ring-2 ring-primary/20 bg-gradient-to-br from-primary to-secondary flex items-center justify-center"
                     >
-                      <img
-                        src={`https://i.pravatar.cc/100?img=${i + 10}`}
-                        alt=""
-                        className="w-full h-full object-cover"
-                      />
+                      <span className="text-xs font-bold text-primary-foreground">{initials}</span>
                     </motion.div>
                   ))}
                 </div>
