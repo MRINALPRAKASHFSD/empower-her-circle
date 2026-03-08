@@ -421,8 +421,8 @@ export default function Dashboard() {
                       transition={{ type: 'spring', stiffness: 300 }}
                     >
                       <Avatar className="w-20 h-20 mx-auto mb-4 ring-4 ring-primary/20">
-                        <AvatarImage src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop&crop=face" />
-                        <AvatarFallback>LK</AvatarFallback>
+                        <AvatarImage src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=200&h=200&fit=crop&crop=face" />
+                        <AvatarFallback>RK</AvatarFallback>
                       </Avatar>
                     </motion.div>
                     <h3 className="font-display text-xl font-semibold mb-1">{userName} Kumar</h3>
