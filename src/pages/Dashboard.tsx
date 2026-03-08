@@ -425,7 +425,7 @@ export default function Dashboard() {
                         <AvatarFallback>RK</AvatarFallback>
                       </Avatar>
                     </motion.div>
-                    <h3 className="font-display text-xl font-semibold mb-1">{userName} Kumar</h3>
+                    <h3 className="font-display text-xl font-semibold mb-1">{userName}</h3>
                     <p className="text-muted-foreground text-sm mb-4">Member since Dec 2024</p>
                     <div className="flex justify-center gap-4 text-center">
                       {[
