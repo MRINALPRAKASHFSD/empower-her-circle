@@ -29,7 +29,7 @@ import {
   FloatingCard,
   TextReveal
 } from '@/components/AnimatedBackground';
-import heroImage from '@/assets/hero-women.jpg';
+
 
 const features = [
   {
@@ -80,21 +80,24 @@ const stats = [
 const testimonials = [
   {
     quote: "EmpowerHer helped me find a mentor who truly understood my career challenges. I've grown so much in just 6 months.",
-    author: "Riya Kapoor",
+    author: "Riya K.",
     role: "Software Developer",
-    avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=face",
+    initials: "RK",
+    color: "from-primary to-secondary",
   },
   {
     quote: "The emergency feature gave me peace of mind when I had to travel alone for work. Knowing help is one tap away is invaluable.",
-    author: "Ananya Singh",
+    author: "Ananya S.",
     role: "Marketing Manager",
-    avatar: "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?w=100&h=100&fit=crop&crop=face",
+    initials: "AS",
+    color: "from-secondary to-accent",
   },
   {
     quote: "The financial courses helped me take control of my money. I've saved more in 3 months than I did in the past year.",
-    author: "Pooja Reddy",
+    author: "Pooja R.",
     role: "Teacher",
-    avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop&crop=face",
+    initials: "PR",
+    color: "from-accent to-primary",
   },
 ];
 
@@ -190,20 +193,16 @@ export default function Index() {
                 transition={{ delay: 0.8 }}
                 className="flex items-center gap-6 pt-4"
               >
-                <div className="flex -space-x-3">
-                  {[1, 2, 3, 4].map((i) => (
+              <div className="flex -space-x-3">
+                  {['RK', 'AS', 'PR', 'MJ'].map((initials, i) => (
                     <motion.div
                       key={i}
                       initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: 0.9 + i * 0.1 }}
-                      className="w-10 h-10 rounded-full border-2 border-background overflow-hidden ring-2 ring-primary/20"
+                      className="w-10 h-10 rounded-full border-2 border-background ring-2 ring-primary/20 bg-gradient-to-br from-primary to-secondary flex items-center justify-center"
                     >
-                      <img
-                        src={`https://i.pravatar.cc/100?img=${i + 10}`}
-                        alt=""
-                        className="w-full h-full object-cover"
-                      />
+                      <span className="text-xs font-bold text-primary-foreground">{initials}</span>
                     </motion.div>
                   ))}
                 </div>
@@ -225,22 +224,30 @@ export default function Index() {
               </motion.div>
             </motion.div>
 
-            {/* Hero image */}
+            {/* Hero abstract visual */}
             <motion.div
               initial={{ opacity: 0, x: 50, scale: 0.95 }}
               animate={{ opacity: 1, x: 0, scale: 1 }}
               transition={{ duration: 0.8, delay: 0.3 }}
               className="relative hidden lg:block"
             >
-              <div className="relative rounded-3xl overflow-hidden shadow-2xl shadow-primary/20">
-                <motion.img
-                  src={heroImage}
-                  alt="Empowered women"
-                  className="w-full h-auto"
-                  whileHover={{ scale: 1.02 }}
-                  transition={{ duration: 0.3 }}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-primary/40 via-transparent to-transparent" />
+              <div className="relative rounded-3xl overflow-hidden shadow-2xl shadow-primary/20 aspect-square bg-gradient-to-br from-primary/20 via-secondary/10 to-accent/20 backdrop-blur-xl border border-border/30 flex items-center justify-center">
+                <div className="absolute inset-0 auth-spin-slow opacity-30">
+                  <div className="absolute top-1/4 left-1/4 w-40 h-40 rounded-full bg-primary/30 blur-3xl" />
+                  <div className="absolute bottom-1/4 right-1/4 w-32 h-32 rounded-full bg-secondary/30 blur-3xl" />
+                  <div className="absolute top-1/2 left-1/2 w-48 h-48 rounded-full bg-accent/20 blur-3xl -translate-x-1/2 -translate-y-1/2" />
+                </div>
+                <div className="relative z-10 text-center space-y-4 p-8">
+                  <motion.div
+                    animate={{ scale: [1, 1.05, 1] }}
+                    transition={{ duration: 3, repeat: Infinity }}
+                    className="w-24 h-24 mx-auto rounded-3xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-xl shadow-primary/30"
+                  >
+                    <Shield className="w-12 h-12 text-primary-foreground" />
+                  </motion.div>
+                  <h3 className="font-display text-2xl font-bold text-foreground">Safe & Secure</h3>
+                  <p className="text-muted-foreground text-sm max-w-xs">Your safety and privacy are our top priority</p>
+                </div>
               </div>
               
               {/* Floating cards */}
@@ -446,12 +453,12 @@ export default function Index() {
                         "{testimonial.quote}"
                       </p>
                       <div className="flex items-center gap-3">
-                        <motion.img
-                          src={testimonial.avatar}
-                          alt={testimonial.author}
-                          className="w-12 h-12 rounded-full object-cover ring-2 ring-primary/20"
+                        <motion.div
+                          className={`w-12 h-12 rounded-full bg-gradient-to-br ${testimonial.color} flex items-center justify-center ring-2 ring-primary/20`}
                           whileHover={{ scale: 1.1 }}
-                        />
+                        >
+                          <span className="text-sm font-bold text-primary-foreground">{testimonial.initials}</span>
+                        </motion.div>
                         <div>
                           <p className="font-semibold">{testimonial.author}</p>
                           <p className="text-sm text-muted-foreground">{testimonial.role}</p>
