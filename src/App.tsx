@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { AdminRoute } from "@/components/AdminRoute";
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import Mentors from "./pages/Mentors";
@@ -13,6 +14,13 @@ import Emergency from "./pages/Emergency";
 import Journal from "./pages/Journal";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminUsers from "./pages/admin/AdminUsers";
+import AdminCourses from "./pages/admin/AdminCourses";
+import AdminMentors from "./pages/admin/AdminMentors";
+import AdminMessages from "./pages/admin/AdminMessages";
+import AdminContacts from "./pages/admin/AdminContacts";
+import AdminJournals from "./pages/admin/AdminJournals";
 
 const queryClient = new QueryClient();
 
