@@ -1,5 +1,6 @@
 {
-  "name": "vite_react_shadcn_ts",
+  "name": "empower-her-circle",
+  "description": "EmpowerHer Circle - Community & Mentorship Platform for Women",
   "private": true,
   "version": "0.0.0",
   "type": "module",
